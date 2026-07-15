@@ -651,6 +651,7 @@ let questionsCleared = 0, timeLeft = 60, gameTimer = null;
 let currentWord = null, currentWordDisplay = '', currentPatterns = [], patternIndex = 0;
 let possibleRomas = [], typedForCurrent = "", allTypedDisplay = "";
 let gameRunning = false, prevRankIdx = 0;
+let wordQueue = []; // 重複なしのシャッフルキュー
 
 // ========== テーマ選択 ==========
 function selectTheme(id) {
@@ -690,6 +691,7 @@ function showRankTab(id, btn) {
 function startGame() {
     score=0; combo=0; maxCombo=0; totalChars=0; correctChars=0;
     questionsCleared=0; timeLeft=60; gameRunning=true; prevRankIdx=0;
+    wordQueue = shuffleArray([...currentTheme.words]);
     const gs = document.getElementById('game-screen');
     gs.style.display = 'flex';
     document.getElementById('theme-bg-art').className = currentTheme.bgClass;
@@ -730,10 +732,13 @@ function addDecorations() {
 // ========== 問題表示 ==========
 function showNextWord() {
     if (!gameRunning) return;
-    const wl = currentTheme.words;
-    const wordObj = wl[Math.floor(Math.random()*wl.length)];
-    currentWord = wordObj.k; // ひらがな（ローマ字変換用）
-    currentWordDisplay = wordObj.d; // 漢字カタカナ混じり（表示用）
+    // キューが空ならシャッフルして補充
+    if (wordQueue.length === 0) {
+        wordQueue = shuffleArray([...currentTheme.words]);
+    }
+    const wordObj = wordQueue.pop();
+    currentWord = wordObj.k;
+    currentWordDisplay = wordObj.d;
     currentPatterns = kanaToRomaPatterns(currentWord);
     patternIndex = 0; typedForCurrent = ""; allTypedDisplay = "";
     setupCurrentPosition();
@@ -916,19 +921,40 @@ function showCorrectEffect() {
     createParticles();
 }
 function createParticles() {
-    const cx=window.innerWidth/2, cy=window.innerHeight/2, emojis=currentTheme.icons;
-    for (let i=0;i<6;i++) {
-        const p=document.createElement('div');
-        p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
-        p.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;font-size:1.6em;pointer-events:none;z-index:300;transition:all 0.6s ease-out;opacity:1;`;
+    const emojis = currentTheme.icons;
+    const count = 10 + Math.min(combo * 2, 10); // コンボ多いほど多く飛ぶ
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        // 画面下部のランダムな位置から発射
+        const startX = Math.random() * window.innerWidth;
+        const startY = window.innerHeight + 20;
+        p.style.cssText = `position:fixed; left:${startX}px; top:${startY}px; font-size:${1.5 + Math.random()*1.2}em; pointer-events:none; z-index:300; opacity:1; transition: none;`;
         document.body.appendChild(p);
-        const angle=(Math.PI*2/6)*i, dist=60+Math.random()*40;
-        requestAnimationFrame(()=>{
-            p.style.left=(cx+Math.cos(angle)*dist)+'px';
-            p.style.top=(cy+Math.sin(angle)*dist-20)+'px';
-            p.style.opacity='0'; p.style.transform='scale(0.3)';
-        });
-        setTimeout(()=>p.remove(),700);
+        // ポンッと跳ね上がる物理演算風
+        const vx = (Math.random() - 0.5) * 6;
+        const vy = -(8 + Math.random() * 6);
+        const gravity = 0.3;
+        const rotation = (Math.random() - 0.5) * 720;
+        let x = startX, y = startY, vyNow = vy, frame = 0;
+        const animate = () => {
+            frame++;
+            x += vx;
+            vyNow += gravity;
+            y += vyNow;
+            const rot = (frame / 30) * rotation;
+            p.style.left = x + 'px';
+            p.style.top = y + 'px';
+            p.style.transform = `rotate(${rot}deg)`;
+            if (frame > 20) p.style.opacity = Math.max(0, 1 - (frame - 20) / 15);
+            if (frame < 35 && y < window.innerHeight + 50) {
+                requestAnimationFrame(animate);
+            } else {
+                p.remove();
+            }
+        };
+        // 少しずつ遅れて発射（ポップコーン風のバラバラ感）
+        setTimeout(() => requestAnimationFrame(animate), i * 30);
     }
 }
 
