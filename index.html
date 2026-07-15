@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オーケータイピング</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Meiryo', sans-serif; overflow-x: hidden; min-height: 100vh; }
+        #theme-select {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 100vh; padding: 20px;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        }
+        #theme-select h1 { color: #fff; font-size: 2.8em; margin-bottom: 8px; text-shadow: 0 0 20px rgba(150,100,255,0.6); }
+        .ts-sub { color: rgba(255,255,255,0.7); font-size: 1.1em; margin-bottom: 30px; }
+        .theme-cards { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
+        .theme-card { width: 300px; padding: 25px; border-radius: 20px; cursor: pointer; transition: all 0.3s; text-align: center; border: 3px solid transparent; }
+        .theme-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.6); }
+        .theme-card h2 { font-size: 1.3em; margin: 10px 0 6px; }
+        .theme-card p { font-size: 0.85em; opacity: 0.85; }
+        .card-stpr { background: linear-gradient(135deg, #ff6b9d, #c44dff); color: #fff; box-shadow: 0 8px 25px rgba(255,107,157,0.3); }
+        .card-mc { background: linear-gradient(135deg, #4a8c3f, #1a5c1a); color: #fff; box-shadow: 0 8px 25px rgba(74,140,63,0.3); }
+        .menu-btn-link { background: rgba(255,255,255,0.15); color: #fff; border: 2px solid rgba(255,255,255,0.3); padding: 12px 25px; border-radius: 12px; font-size: 1.05em; cursor: pointer; font-family: 'Meiryo'; }
+        .menu-btn-link:hover { background: rgba(255,255,255,0.25); }
+    </style>
+</head>
+<body>
+<div id="theme-select">
+    <h1>⌨️ オーケータイピング</h1>
+    <p class="ts-sub">60びょう いないに どれだけ タイプ できるかな？</p>
+    <div class="theme-cards">
+        <div class="theme-card card-stpr" onclick="selectTheme('stpr')">
+            <div style="font-size:2.5em;">🌈✨</div>
+            <h2>STPR・からぴち</h2>
+            <p>すとぷりの せかいで タイピング！</p>
+        </div>
+        <div class="theme-card card-mc" onclick="selectTheme('minecraft')">
+            <div style="font-size:2.5em;">⛏️💎</div>
+            <h2>マインクラフト</h2>
+            <p>ブロックの せかいで タイピング！</p>
+        </div>
+    </div>
+    <button class="menu-btn-link" onclick="showRankTable()">📊 ランクひょう</button>
+</div>
+
+<!-- ランク表 -->
+<div id="rank-table-screen" style="display:none; min-height:100vh; background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); padding:20px;">
+    <div style="max-width:700px; margin:0 auto;">
+        <h2 style="color:#fff; text-align:center; font-size:2em; margin-bottom:20px;">📊 ランクひょう</h2>
+        <p style="color:rgba(255,255,255,0.7); text-align:center; margin-bottom:20px;">スコアが あがると ランクアップ！</p>
+        <div class="rank-tabs">
+            <button class="rtab active" onclick="showRankTab('stpr', this)">🌈 STPR</button>
+            <button class="rtab" onclick="showRankTab('minecraft', this)">⛏️ マイクラ</button>
+        </div>
+        <div id="rank-list-area"></div>
+        <div style="text-align:center; margin-top:20px;">
+            <button onclick="hideRankTable()" style="background:#7c4dff; color:#fff; border:none; padding:12px 30px; border-radius:12px; font-size:1.1em; cursor:pointer; font-family:'Meiryo';">もどる</button>
+        </div>
+    </div>
+</div>
+<!-- ゲーム画面 -->
+<div id="game-screen" style="display:none; min-height:100vh; position:relative;">
+    <div id="theme-bg-art"></div>
+    <div id="game-header">
+        <div class="gh-left">
+            <span id="score-display">スコア: 0</span>
+            <span id="combo-display">🔥 0コンボ</span>
+        </div>
+        <div class="gh-center"><span id="time-display">⏱ 60s</span></div>
+        <div class="gh-right">
+            <span id="rank-display"></span>
+            <button onclick="backToMenu()" class="hdr-menu-btn">🏠</button>
+        </div>
+    </div>
+    <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+    <div id="question-area">
+        <div id="question-card">
+            <div id="q-pixel-art"></div>
+            <div id="q-japanese"></div>
+            <div id="q-romaji"></div>
+            <div id="q-input-area">
+                <input type="text" id="type-input" autocomplete="off" spellcheck="false" placeholder="ローマじで タイプ！">
+                <div id="q-typed-display"></div>
+            </div>
+            <div id="q-cleared" style="color:#888; font-size:0.9em; margin-top:8px;"></div>
+        </div>
+    </div>
+    <div id="correct-effect" style="display:none;"><div id="effect-text"></div></div>
+</div>
+<!-- 結果画面 -->
+<div id="result-screen" style="display:none; min-height:100vh; position:relative;">
+    <div id="result-box">
+        <h1 id="result-title">🎉 タイムアップ！ 🎉</h1>
+        <div id="result-pixel-art"></div>
+        <div id="result-rank-name"></div>
+        <div id="result-stats">
+            <div class="stat-row"><span>スコア</span><span id="final-score">0</span></div>
+            <div class="stat-row"><span>クリアすう</span><span id="final-cleared">0</span></div>
+            <div class="stat-row"><span>さいだいコンボ</span><span id="final-combo">0</span></div>
+            <div class="stat-row"><span>せいかくりつ</span><span id="final-accuracy">0%</span></div>
+        </div>
+        <div id="next-rank-hint"></div>
+        <div id="result-btns">
+            <button onclick="restartGame()" class="rbtn rbtn-play">もういちど</button>
+            <button onclick="backToMenu()" class="rbtn rbtn-menu">メニューへ</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    #game-screen { display: flex; flex-direction: column; align-items: center; }
+    #game-header { position: fixed; top: 0; left: 0; right: 0; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 100; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); }
+    .gh-left, .gh-center, .gh-right { color: #fff; font-size: 0.95em; }
+    .gh-left span { margin-right: 10px; }
+    .gh-center { font-weight: bold; font-size: 1.3em; }
+    #timer-bar-wrap { position: fixed; top: 44px; left: 0; right: 0; height: 10px; background: rgba(0,0,0,0.3); z-index: 99; }
+    #timer-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); transition: width 1s linear; }
+    #rank-display { color: #ffd700; font-weight: bold; margin-right: 8px; }
+    .hdr-menu-btn { background: rgba(255,255,255,0.15); color: #fff; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+    #theme-bg-art { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1; }
+    .bg-stpr { background: linear-gradient(180deg, #1a0033 0%, #2d0060 50%, #4a0080 100%); }
+    .bg-stpr::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0;
+        background: radial-gradient(circle at 15% 25%, rgba(255,50,100,0.12) 0%, transparent 35%), radial-gradient(circle at 85% 75%, rgba(180,50,255,0.12) 0%, transparent 35%); }
+    .bg-minecraft { background: linear-gradient(180deg, #7ec8e3 0%, #7ec8e3 30%, #5b9b4a 30%, #4a8c3f 50%, #8B6914 50%, #6b4e1f 70%, #555 70%, #444 100%); }
+    #question-area { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 70px 20px 20px; }
+    #question-card { background: rgba(255,255,255,0.97); border-radius: 20px; padding: 28px 35px; text-align: center; max-width: 550px; width: 100%; box-shadow: 0 15px 50px rgba(0,0,0,0.3); animation: cardPop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes cardPop { from { transform: scale(0.7) translateY(20px); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    #q-pixel-art { margin-bottom: 8px; display: flex; justify-content: center; }
+    .pixel-container { display: grid; gap: 0; image-rendering: pixelated; }
+    #q-japanese { font-size: 2em; color: #333; font-weight: bold; margin: 10px 0 5px; line-height: 1.3; }
+    #q-romaji { font-size: 1em; color: #aaa; letter-spacing: 1px; margin-bottom: 16px; font-family: 'Consolas', monospace; }
+    #type-input { font-size: 1.4em; padding: 12px 16px; border: 3px solid #ddd; border-radius: 10px; width: 100%; text-align: center; font-family: 'Consolas', monospace; outline: none; background: #fafafa; transition: border-color 0.2s; }
+    #type-input:focus { border-color: #7c4dff; background: #fff; }
+    #q-typed-display { margin-top: 10px; font-size: 1.2em; letter-spacing: 2px; font-family: 'Consolas', monospace; min-height: 1.5em; }
+    .char-correct { color: #4CAF50; } .char-current { color: #7c4dff; text-decoration: underline; font-weight: bold; } .char-pending { color: #ddd; }
+    #correct-effect { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; z-index: 200; pointer-events: none; }
+    #effect-text { font-size: 2.2em; color: #fff; font-weight: bold; text-shadow: 0 0 20px rgba(255,215,0,0.8); animation: effectPop 0.6s ease-out forwards; }
+    @keyframes effectPop { 0% { transform: scale(0.5); opacity: 0; } 30% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+    #result-screen { display: flex; align-items: center; justify-content: center; padding: 20px; }
+    #result-box { background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); padding: 35px 40px; border-radius: 22px; text-align: center; max-width: 430px; width: 100%; }
+    #result-title { color: #fff; font-size: 1.8em; margin-bottom: 10px; }
+    #result-pixel-art { display: flex; justify-content: center; margin: 10px 0; }
+    #result-rank-name { color: #ffd700; font-size: 1.8em; font-weight: bold; margin-bottom: 15px; }
+    #result-stats { color: #fff; font-size: 1em; }
+    .stat-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .stat-row span:last-child { font-weight: bold; color: #4fc3f7; }
+    #next-rank-hint { color: rgba(255,255,255,0.7); font-size: 0.9em; margin-top: 12px; }
+    #result-btns { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+    .rbtn { padding: 11px 24px; font-size: 1em; border: none; border-radius: 10px; cursor: pointer; font-family: 'Meiryo'; }
+    .rbtn-play { background: #7c4dff; color: #fff; } .rbtn-menu { background: rgba(255,255,255,0.15); color: #fff; }
+    .rank-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; }
+    .rtab { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Meiryo'; font-size: 1em; background: rgba(255,255,255,0.1); color: #fff; }
+    .rtab.active { background: #7c4dff; }
+    .rank-card { display: flex; align-items: center; gap: 15px; padding: 12px 15px; margin-bottom: 8px; border-radius: 12px; background: rgba(255,255,255,0.08); border-left: 4px solid; }
+    .rank-card .rc-info { text-align: left; color: #fff; }
+    .rank-card .rc-name { font-size: 1.1em; font-weight: bold; }
+    .rank-card .rc-score { font-size: 0.85em; opacity: 0.7; }
+    .stpr-stars { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: -1; overflow: hidden; }
+    .stpr-stars .star { position: absolute; opacity: 0.3; animation: twinkle 3s ease-in-out infinite alternate; }
+    @keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.5; } }
+    @media (max-width:600px) { #theme-select h1{font-size:2em;} .theme-card{width:90%;} #question-card{padding:20px 15px;} #q-japanese{font-size:1.5em;} #type-input{font-size:1.2em;} }
+</style>
+
+<script>
+// ========== SE音（Web Audio API） ==========
+let audioCtx = null;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+function playCorrectSE(theme) {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    if (theme === 'stpr') {
+        // キラキラ音
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1);
+    } else {
+        // マイクラっぽいピックアップ音
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.05);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+    }
+    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+}
+
+function playMissSE() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playRankUpSE() {
+    initAudio();
+    [523, 659, 784, 1047].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.1 + 0.2);
+        osc.start(audioCtx.currentTime + i * 0.1);
+        osc.stop(audioCtx.currentTime + i * 0.1 + 0.2);
+    });
+}
+
+function playTimeUpSE() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+}
+
+// ========== BGM ==========
+let bgmInterval = null;
+let bgmGain = null;
+
+function startBGM(theme) {
+    initAudio();
+    stopBGM();
+    bgmGain = audioCtx.createGain();
+    bgmGain.connect(audioCtx.destination);
+    bgmGain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+
+    // テーマ別のメロディ
+    const stprNotes = [523,587,659,784,659,587,523,392, 523,659,784,880,784,659,523,392];
+    const mcNotes = [330,330,392,440,392,330,262,294, 330,392,440,523,440,392,330,262];
+    const notes = theme === 'stpr' ? stprNotes : mcNotes;
+    const waveType = theme === 'stpr' ? 'sine' : 'square';
+    const tempo = 180; // ms per note
+    let noteIdx = 0;
+
+    function playNote() {
+        if (!bgmGain) return;
+        const osc = audioCtx.createOscillator();
+        const noteGain = audioCtx.createGain();
+        osc.connect(noteGain); noteGain.connect(bgmGain);
+        osc.type = waveType;
+        osc.frequency.setValueAtTime(notes[noteIdx % notes.length], audioCtx.currentTime);
+        noteGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + tempo/1000 * 0.8);
+        osc.start(); osc.stop(audioCtx.currentTime + tempo/1000 * 0.9);
+        noteIdx++;
+    }
+
+    playNote();
+    bgmInterval = setInterval(playNote, tempo);
+}
+
+function stopBGM() {
+    if (bgmInterval) { clearInterval(bgmInterval); bgmInterval = null; }
+    if (bgmGain) { bgmGain.gain.setValueAtTime(0, audioCtx ? audioCtx.currentTime : 0); bgmGain = null; }
+}
+
+// ========== ローマ字変換 ==========
+const KANA_TO_ROMA = {
+    'あ':['a'],'い':['i'],'う':['u'],'え':['e'],'お':['o'],
+    'か':['ka','ca'],'き':['ki'],'く':['ku','cu','qu'],'け':['ke'],'こ':['ko','co'],
+    'さ':['sa'],'し':['si','shi','ci'],'す':['su'],'せ':['se','ce'],'そ':['so'],
+    'た':['ta'],'ち':['ti','chi'],'つ':['tu','tsu'],'て':['te'],'と':['to'],
+    'な':['na'],'に':['ni'],'ぬ':['nu'],'ね':['ne'],'の':['no'],
+    'は':['ha'],'ひ':['hi'],'ふ':['hu','fu'],'へ':['he'],'ほ':['ho'],
+    'ま':['ma'],'み':['mi'],'む':['mu'],'め':['me'],'も':['mo'],
+    'や':['ya'],'ゆ':['yu'],'よ':['yo'],
+    'ら':['ra'],'り':['ri'],'る':['ru'],'れ':['re'],'ろ':['ro'],
+    'わ':['wa'],'を':['wo'],'ん':['nn',"n'",'xn'],
+    'が':['ga'],'ぎ':['gi'],'ぐ':['gu'],'げ':['ge'],'ご':['go'],
+    'ざ':['za'],'じ':['zi','ji'],'ず':['zu'],'ぜ':['ze'],'ぞ':['zo'],
+    'だ':['da'],'ぢ':['di'],'づ':['du','dzu'],'で':['de'],'ど':['do'],
+    'ば':['ba'],'び':['bi'],'ぶ':['bu'],'べ':['be'],'ぼ':['bo'],
+    'ぱ':['pa'],'ぴ':['pi'],'ぷ':['pu'],'ぺ':['pe'],'ぽ':['po'],
+    'きゃ':['kya'],'きゅ':['kyu'],'きょ':['kyo'],
+    'しゃ':['sya','sha'],'しゅ':['syu','shu'],'しょ':['syo','sho'],
+    'ちゃ':['tya','cha','cya'],'ちゅ':['tyu','chu','cyu'],'ちょ':['tyo','cho','cyo'],
+    'にゃ':['nya'],'にゅ':['nyu'],'にょ':['nyo'],
+    'ひゃ':['hya'],'ひゅ':['hyu'],'ひょ':['hyo'],
+    'みゃ':['mya'],'みゅ':['myu'],'みょ':['myo'],
+    'りゃ':['rya'],'りゅ':['ryu'],'りょ':['ryo'],
+    'ぎゃ':['gya'],'ぎゅ':['gyu'],'ぎょ':['gyo'],
+    'じゃ':['ja','zya','jya'],'じゅ':['ju','zyu','jyu'],'じょ':['jo','zyo','jyo'],
+    'びゃ':['bya'],'びゅ':['byu'],'びょ':['byo'],
+    'ぴゃ':['pya'],'ぴゅ':['pyu'],'ぴょ':['pyo'],
+    'ぁ':['xa','la'],'ぃ':['xi','li'],'ぅ':['xu','lu'],'ぇ':['xe','le'],'ぉ':['xo','lo'],
+    'ゃ':['xya','lya'],'ゅ':['xyu','lyu'],'ょ':['xyo','lyo'],
+    'っ':['xtu','ltu','xtsu','ltsu'],
+    'ー':['-'],'！':['!'],'？':['?'],'、':[',','、'],'。':['.','。'],' ':[' ']
+};
+
+function kanaToRomaPatterns(kanaStr) {
+    // カタカナをひらがなに変換
+    kanaStr = kanaStr.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+    // ヴ→ゔ
+    kanaStr = kanaStr.replace(/\u30F4/g, 'ゔ');
+    const patterns = [];
+    let i = 0;
+    while (i < kanaStr.length) {
+        if (kanaStr[i] === 'っ' && i + 1 < kanaStr.length) {
+            let nextKana = '', nextPatterns = null;
+            if (i + 2 < kanaStr.length && KANA_TO_ROMA[kanaStr[i+1] + kanaStr[i+2]]) {
+                nextKana = kanaStr[i+1] + kanaStr[i+2];
+                nextPatterns = KANA_TO_ROMA[nextKana]; i += 3;
+            } else if (KANA_TO_ROMA[kanaStr[i+1]]) {
+                nextKana = kanaStr[i+1];
+                nextPatterns = KANA_TO_ROMA[nextKana]; i += 2;
+            }
+            if (nextPatterns) {
+                const doubled = nextPatterns.map(p => p[0] + p);
+                const xtu = ['xtu','ltu','xtsu','ltsu'].flatMap(x => nextPatterns.map(p => x + p));
+                patterns.push({ roma: [...doubled, ...xtu], display: doubled[0] });
+                continue;
+            }
+        }
+        if (i + 1 < kanaStr.length && KANA_TO_ROMA[kanaStr[i] + kanaStr[i+1]]) {
+            const r = KANA_TO_ROMA[kanaStr[i] + kanaStr[i+1]];
+            patterns.push({ roma: r, display: r[0] }); i += 2; continue;
+        }
+        if (kanaStr[i] === 'ん') {
+            const next = i + 1 < kanaStr.length ? kanaStr[i+1] : '';
+            const needDouble = 'あいうえおやゆよなにぬねの'.includes(next);
+            patterns.push({ roma: needDouble ? ['nn',"n'",'xn'] : ['n','nn',"n'",'xn'], display: needDouble ? 'nn' : 'n' });
+            i++; continue;
+        }
+        if (KANA_TO_ROMA[kanaStr[i]]) {
+            const r = KANA_TO_ROMA[kanaStr[i]];
+            patterns.push({ roma: r, display: r[0] });
+        } else {
+            patterns.push({ roma: [kanaStr[i]], display: kanaStr[i] });
+        }
+        i++;
+    }
+    return patterns;
+}
+
+// ========== ピクセルアート（メンバーカラー忠実 / マイクラブロック風） ==========
+const PIXEL_ART = {
+    stpr: {
+        // リスナー: グレーのヘッドホンキャラ
+        listener: { colors: [
+            "...gg...",
+            "..gggg..",
+            ".ggggg..",
+            ".gwggwg.",
+            ".gggggg.",
+            "..gmsg..",
+            "..gggg..",
+            "...gg..."
+        ], palette: {g:'#666',w:'#fff',m:'#444',s:'#aaa'}},
+        // ころん: 茶色メイン、クマ耳
+        koron: { colors: [
+            ".bb..bb.",
+            "bbbbbbbb",
+            "bwbbbbwb",
+            "bbkbbkbb",
+            "bbbbbbbb",
+            ".bbrrbb.",
+            "..bbbb..",
+            "...bb..."
+        ], palette: {b:'#A0522D',w:'#fff',k:'#1a1a1a',r:'#ff6b6b'}},
+        // るぅと: 金髪、王冠
+        ruuto: { colors: [
+            "..yYYy..",
+            ".yyyyyy.",
+            "ywyyyywy",
+            "yykyykyy",
+            ".yyyyyy.",
+            "..yRRy..",
+            "..yyyy..",
+            "...yy..."
+        ], palette: {y:'#FFD700',Y:'#FFF176',w:'#fff',k:'#333',R:'#ff4444'}},
+        // さとみ: 緑メイン、ゲームっぽい
+        satomi: { colors: [
+            "..gggg..",
+            ".gGgGGg.",
+            "gWggggWg",
+            "ggkggkgg",
+            ".gggggg.",
+            "..gmmg..",
+            "..gggg..",
+            "...gg..."
+        ], palette: {g:'#388E3C',G:'#66BB6A',W:'#fff',k:'#222',m:'#81C784'}},
+        // ジェル: オレンジメイン
+        jeru: { colors: [
+            "..oooo..",
+            ".oOoOOo.",
+            "oWooooWo",
+            "ookookoo",
+            ".oooooo.",
+            "..oMMo..",
+            "..oooo..",
+            "...oo..."
+        ], palette: {o:'#F57C00',O:'#FFB74D',W:'#fff',k:'#333',M:'#FFCC02'}},
+        // 莉犬: 赤/ピンク、犬耳
+        riinu: { colors: [
+            ".rr..rr.",
+            "rrrrrrrr",
+            "rWrrrrWr",
+            "rrkrrkrr",
+            ".rrrrrr.",
+            "..rPPr..",
+            "..rrrr..",
+            "...rr..."
+        ], palette: {r:'#E91E63',W:'#fff',k:'#333',P:'#F48FB1'}},
+        // ななもり: 紫メイン、月モチーフ
+        nanamori: { colors: [
+            "...Mm...",
+            "..pppp..",
+            ".pPpPPp.",
+            "pWppppWp",
+            "ppkppkpp",
+            ".pppppp.",
+            "..pppp..",
+            "...pp..."
+        ], palette: {p:'#7B1FA2',P:'#BA68C8',W:'#fff',k:'#222',M:'#FDD835',m:'#FDD835'}}
+    },
+    minecraft: {
+        // 草ブロック
+        wood: { colors: [
+            "GgGGgGGg",
+            "gGgGGgGG",
+            "GGGgGGgG",
+            "bbBbbBbb",
+            "bBbbbBbB",
+            "BbbBbbbB",
+            "bbBbbBbb",
+            "bBbbbBbB"
+        ], palette: {G:'#5b9b3f',g:'#4a8530',B:'#8B6914',b:'#7a5c10'}},
+        // 丸石
+        stone: { colors: [
+            "aAaaAaAa",
+            "AaAaAAAa",
+            "aaAaAaAA",
+            "AAAaAaAa",
+            "aAaAAAAa",
+            "AaAaAaAA",
+            "aAAAaAaA",
+            "AAaAaAAa"
+        ], palette: {a:'#7a7a7a',A:'#999'}},
+        // 鉄ブロック
+        iron: { colors: [
+            "ssSsssSs",
+            "sSsSsSsS",
+            "SssSSssS",
+            "sSsSsSSs",
+            "sSSssSsS",
+            "SsSsSSsS",
+            "sSSSsSsS",
+            "ssSsSSss"
+        ], palette: {s:'#b0b0b0',S:'#ddd'}},
+        // 金ブロック
+        gold: { colors: [
+            "yYyYyYyY",
+            "YyYYyYYy",
+            "yYyYyYyY",
+            "YYyYYyYY",
+            "yYyYyYyY",
+            "YyYYyYYy",
+            "yYyYyYyY",
+            "YYyYYyYy"
+        ], palette: {y:'#D4A017',Y:'#FFD700'}},
+        // ダイヤ鉱石
+        diamond: { colors: [
+            "ggDgggDg",
+            "gggDgDgg",
+            "DggggggD",
+            "ggDgDggg",
+            "gggggDgg",
+            "gDgDgggg",
+            "ggggDgDg",
+            "gDgggggg"
+        ], palette: {g:'#6a6a6a',D:'#4DD0E1'}},
+        // ネザライト (古代のがれき風)
+        netherite: { colors: [
+            "nnRnnnRn",
+            "nnnRnRnn",
+            "RnnnnnnR",
+            "nnRnRnnn",
+            "nnnnnRnn",
+            "nRnRnnnn",
+            "nnnnRnRn",
+            "nRnnnnnn"
+        ], palette: {n:'#3d2b2b',R:'#6a1b1b'}},
+        // エンダードラゴン
+        dragon: { colors: [
+            "..P..P..",
+            ".PPPPPP.",
+            "PPEPPEP.",
+            "PPPPPPPP",
+            ".PPPPPP.",
+            "PPPPPPPP",
+            ".P.PP.P.",
+            "P..PP..P"
+        ], palette: {P:'#2a0050',E:'#d580ff'}}
+    }
+};
+
+function renderPixelArt(artData, px) {
+    const c = document.createElement('div'); c.className = 'pixel-container';
+    const rows = artData.colors, cols = Math.max(...rows.map(r=>r.length));
+    c.style.gridTemplateColumns = `repeat(${cols}, ${px}px)`;
+    c.style.width = (cols*px)+'px';
+    for (let r=0; r<rows.length; r++) {
+        for (let col=0; col<cols; col++) {
+            const cell = document.createElement('div');
+            const ch = col<rows[r].length ? rows[r][col] : '.';
+            cell.style.width=px+'px'; cell.style.height=px+'px';
+            cell.style.background = (ch==='.'||ch===' ') ? 'transparent' : (artData.palette[ch]||'#000');
+            c.appendChild(cell);
+        }
+    }
+    return c;
+}
+
+// ========== テーマデータ ==========
+const THEMES = {
+    stpr: {
+        name: "STPR・からぴち",
+        bgClass: "bg-stpr",
+        icons: ["🌈","✨","🎤","🎵","💜","🩷","🧡","💛","💚","💙","⭐","🌙","🎀","🍓"],
+        ranks: [
+            { name: "リスナー", icon: "🎧", minScore: 0, art: "listener", color: "#888" },
+            { name: "ころん", icon: "🐻", minScore: 60, art: "koron", color: "#A0522D" },
+            { name: "るぅと", icon: "👑", minScore: 150, art: "ruuto", color: "#FFD700" },
+            { name: "さとみ", icon: "🎮", minScore: 260, art: "satomi", color: "#388E3C" },
+            { name: "ジェル", icon: "🧡", minScore: 380, art: "jeru", color: "#F57C00" },
+            { name: "莉犬", icon: "🐶", minScore: 520, art: "riinu", color: "#E91E63" },
+            { name: "ななもり", icon: "🌙", minScore: 680, art: "nanamori", color: "#7B1FA2" }
+        ],
+        words: [
+            {d:"すとぷり最高！", k:"すとぷりさいこう！"},
+            {d:"新曲でた！", k:"しんきょくでた！"},
+            {d:"莉犬ところんのコラボ", k:"りいぬところんのこらぼ"},
+            {d:"それなー！", k:"それなー！"},
+            {d:"ななもりの声すき", k:"ななもりのこえすき"},
+            {d:"ジェルおもしろい", k:"じぇるおもしろい"},
+            {d:"さとみゲームうまい", k:"さとみげーむうまい"},
+            {d:"るぅとの歌すき", k:"るぅとのうたすき"},
+            {d:"配信ありがとう", k:"はいしんありがとう"},
+            {d:"からぴち見た？", k:"からぴちみた？"},
+            {d:"グッズほしい！", k:"ぐっずほしい！"},
+            {d:"ライブ行きたい", k:"らいぶいきたい"},
+            {d:"チケット当たった！", k:"ちけっとあたった！"},
+            {d:"マジやばい", k:"まじやばい"},
+            {d:"おつすとー！", k:"おつすとー！"},
+            {d:"ころんかわいい", k:"ころんかわいい"},
+            {d:"歌ってみた最高", k:"うたってみたさいこう"},
+            {d:"登録わすれないで", k:"とうろくわすれないで"},
+            {d:"一番すき！", k:"いちばんすき！"},
+            {d:"スパチャ飛んだ！", k:"すぱちゃとんだ！"},
+            {d:"ずっとそばにいるよ", k:"ずっとそばにいるよ"},
+            {d:"きみとボクのストーリー", k:"きみとぼくのすとーりー"},
+            {d:"夢の中で会おう", k:"ゆめのなかであおう"},
+            {d:"キミが好きだよ", k:"きみがすきだよ"},
+            {d:"笑顔でいてね", k:"えがおでいてね"},
+            {d:"今日もがんばろう", k:"きょうもがんばろう"},
+            {d:"いつもありがとう", k:"いつもありがとう"},
+            {d:"仲間だからね", k:"なかまだからね"},
+            {d:"明日も会えるかな", k:"あしたもあえるかな"},
+            {d:"大好きだよ！", k:"だいすきだよ！"},
+            {d:"ガチ恋だわ", k:"がちこいだわ"},
+            {d:"神回だった", k:"かみかいだった"},
+            {d:"リピートやめられない", k:"りぴーとやめられない"},
+            {d:"みんな元気？", k:"みんなげんき？"},
+            {d:"声が好きすぎる", k:"こえがすきすぎる"},
+            {d:"まだ見てない人いる？", k:"まだみてないひといる？"},
+            {d:"一緒にいようね", k:"いっしょにいようね"},
+            {d:"キラキラしてる", k:"きらきらしてる"},
+            {d:"夜空を見上げて", k:"よぞらをみあげて"},
+            {d:"走り出そう", k:"はしりだそう"}
+        ]
+    },
+    minecraft: {
+        name: "マインクラフト",
+        bgClass: "bg-minecraft",
+        icons: ["⛏️","💎","🪨","🌲","🧱","🗡️","🛡️","🏹","🪓","⚔️","🔥","🐷","🧟","💀"],
+        ranks: [
+            { name: "もくのけん", icon: "🪵", minScore: 0, art: "wood", color: "#8B6914" },
+            { name: "いしのけん", icon: "🪨", minScore: 60, art: "stone", color: "#7a7a7a" },
+            { name: "てつのけん", icon: "⚔️", minScore: 150, art: "iron", color: "#b0b0b0" },
+            { name: "きんのけん", icon: "✨", minScore: 260, art: "gold", color: "#FFD700" },
+            { name: "ダイヤのけん", icon: "💎", minScore: 380, art: "diamond", color: "#4DD0E1" },
+            { name: "ネザライトのけん", icon: "🔥", minScore: 520, art: "netherite", color: "#6a1b1b" },
+            { name: "エンダードラゴン", icon: "🐉", minScore: 680, art: "dragon", color: "#9C27B0" }
+        ],
+        words: [
+            {d:"クリーパーだ！にげろ！", k:"くりーぱーだ！にげろ！"},
+            {d:"ダイヤきた！", k:"だいやきた！"},
+            {d:"木材が足りない", k:"もくざいがたりない"},
+            {d:"ネザーこわい", k:"ねざーこわい"},
+            {d:"エンダーマンやばい", k:"えんだーまんやばい"},
+            {d:"鉄のヨロイ作る", k:"てつのよろいつくる"},
+            {d:"マグマに落ちた！", k:"まぐまにおちた！"},
+            {d:"村人と取引する", k:"むらびとととりひきする"},
+            {d:"たいまつ置こう", k:"たいまつおこう"},
+            {d:"チェストにしまう", k:"ちぇすとにしまう"},
+            {d:"ポーション作りたい", k:"ぽーしょんつくりたい"},
+            {d:"サトウキビ育てる", k:"さとうきびそだてる"},
+            {d:"ドラゴン倒す！", k:"どらごんたおす！"},
+            {d:"オオカミ仲間にする", k:"おおかみなかまにする"},
+            {d:"ツルハシ壊れた", k:"つるはしこわれた"},
+            {d:"イルカかわいい", k:"いるかかわいい"},
+            {d:"スライムうざい", k:"すらいむうざい"},
+            {d:"カマドで焼く", k:"かまどでやく"},
+            {d:"空を飛びたい", k:"そらをとびたい"},
+            {d:"ゾンビがきた", k:"ぞんびがきた"},
+            {d:"新ワールドで始める", k:"しんわーるどではじめる"},
+            {d:"ハチミツで回復", k:"はちみつでかいふく"},
+            {d:"キツネかわいい", k:"きつねかわいい"},
+            {d:"カボチャかぶる", k:"かぼちゃかぶる"},
+            {d:"ネコ連れて帰る", k:"ねこつれてかえる"},
+            {d:"サバイバルでやる", k:"さばいばるでやる"},
+            {d:"馬はやい！", k:"うまはやい！"},
+            {d:"エンチャントする", k:"えんちゃんとする"},
+            {d:"ピッケルほしい", k:"ぴっけるほしい"},
+            {d:"鉄ほりに行く", k:"てつほりにいく"},
+            {d:"ゴーレムつよい", k:"ごーれむつよい"},
+            {d:"ウィザー倒した？", k:"うぃざーたおした？"},
+            {d:"ベッドで寝る", k:"べっどでねる"},
+            {d:"TNTで遊ぶ", k:"てぃーえぬてぃーであそぶ"},
+            {d:"家を建てよう", k:"いえをたてよう"},
+            {d:"食べ物がない！", k:"たべものがない！"},
+            {d:"松明たりない", k:"たいまつたりない"},
+            {d:"洞くつ探検する", k:"どうくつたんけんする"},
+            {d:"弓で倒す", k:"ゆみでたおす"},
+            {d:"盾で守る", k:"たてでまもる"}
+        ]
+    }
+};
+
+// ========== ゲーム状態 ==========
+let currentTheme = null, currentThemeId = '';
+let score = 0, combo = 0, maxCombo = 0, totalChars = 0, correctChars = 0;
+let questionsCleared = 0, timeLeft = 60, gameTimer = null;
+let currentWord = null, currentWordDisplay = '', currentPatterns = [], patternIndex = 0;
+let possibleRomas = [], typedForCurrent = "", allTypedDisplay = "";
+let gameRunning = false, prevRankIdx = 0;
+
+// ========== テーマ選択 ==========
+function selectTheme(id) {
+    currentThemeId = id;
+    currentTheme = THEMES[id];
+    document.getElementById('theme-select').style.display = 'none';
+    startGame();
+}
+
+// ========== ランク表 ==========
+function showRankTable() {
+    document.getElementById('theme-select').style.display = 'none';
+    document.getElementById('rank-table-screen').style.display = 'block';
+    showRankTab('stpr', document.querySelector('.rtab'));
+}
+function hideRankTable() {
+    document.getElementById('rank-table-screen').style.display = 'none';
+    document.getElementById('theme-select').style.display = 'flex';
+}
+function showRankTab(id, btn) {
+    document.querySelectorAll('.rtab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const theme = THEMES[id]; const area = document.getElementById('rank-list-area');
+    let html = '';
+    theme.ranks.forEach((rank, i) => {
+        const hint = i < theme.ranks.length-1 ? `${rank.minScore}～${theme.ranks[i+1].minScore-1}てん` : `${rank.minScore}てん いじょう`;
+        html += `<div class="rank-card" style="border-color:${rank.color};"><div id="rp-${id}-${i}"></div><div class="rc-info"><div class="rc-name" style="color:${rank.color};">${rank.icon} ${rank.name}</div><div class="rc-score">${hint}</div></div></div>`;
+    });
+    area.innerHTML = html;
+    theme.ranks.forEach((rank, i) => {
+        const el = document.getElementById(`rp-${id}-${i}`);
+        if (el && PIXEL_ART[id][rank.art]) el.appendChild(renderPixelArt(PIXEL_ART[id][rank.art], 4));
+    });
+}
+
+// ========== ゲーム開始 ==========
+function startGame() {
+    score=0; combo=0; maxCombo=0; totalChars=0; correctChars=0;
+    questionsCleared=0; timeLeft=60; gameRunning=true; prevRankIdx=0;
+    const gs = document.getElementById('game-screen');
+    gs.style.display = 'flex';
+    document.getElementById('theme-bg-art').className = currentTheme.bgClass;
+    document.getElementById('result-screen').style.display = 'none';
+    document.getElementById('time-display').textContent = '⏱ 60s';
+    document.getElementById('timer-bar').style.width = '100%';
+    document.getElementById('timer-bar').style.background = 'linear-gradient(90deg,#4CAF50,#8BC34A)';
+    addDecorations();
+    updateScoreDisplay();
+    showNextWord();
+    if (gameTimer) clearInterval(gameTimer);
+    startBGM(currentThemeId);
+    gameTimer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('time-display').textContent = `⏱ ${timeLeft}s`;
+        document.getElementById('timer-bar').style.width = ((timeLeft/60)*100)+'%';
+        if (timeLeft <= 10) document.getElementById('timer-bar').style.background = 'linear-gradient(90deg,#f44336,#ff5722)';
+        if (timeLeft <= 0) endGame();
+    }, 1000);
+}
+
+function addDecorations() {
+    document.querySelectorAll('.stpr-stars').forEach(el => el.remove());
+    if (currentThemeId === 'stpr') {
+        const c = document.createElement('div'); c.className = 'stpr-stars';
+        const syms = ['✨','⭐','🌟','💫','🎵','♪','🩷','💜','🍓'];
+        for (let i=0; i<18; i++) {
+            const s = document.createElement('span'); s.className = 'star';
+            s.textContent = syms[Math.floor(Math.random()*syms.length)];
+            s.style.left = Math.random()*100+'%'; s.style.top = Math.random()*100+'%';
+            s.style.animationDelay = (Math.random()*3)+'s'; s.style.fontSize = (1+Math.random()*1.5)+'em';
+            c.appendChild(s);
+        }
+        document.body.appendChild(c);
+    }
+}
+
+// ========== 問題表示 ==========
+function showNextWord() {
+    if (!gameRunning) return;
+    const wl = currentTheme.words;
+    const wordObj = wl[Math.floor(Math.random()*wl.length)];
+    currentWord = wordObj.k; // ひらがな（ローマ字変換用）
+    currentWordDisplay = wordObj.d; // 漢字カタカナ混じり（表示用）
+    currentPatterns = kanaToRomaPatterns(currentWord);
+    patternIndex = 0; typedForCurrent = ""; allTypedDisplay = "";
+    setupCurrentPosition();
+    const card = document.getElementById('question-card');
+    card.style.animation='none'; card.offsetHeight; card.style.animation='cardPop 0.3s cubic-bezier(0.34,1.56,0.64,1)';
+    const rank = getRank(score);
+    const ac = document.getElementById('q-pixel-art'); ac.innerHTML='';
+    const art = PIXEL_ART[currentThemeId][rank.art];
+    if (art) ac.appendChild(renderPixelArt(art, 5));
+    document.getElementById('q-japanese').textContent = currentWordDisplay;
+    document.getElementById('q-romaji').textContent = currentPatterns.map(p=>p.display).join('');
+    document.getElementById('type-input').value = '';
+    document.getElementById('type-input').focus();
+    document.getElementById('q-cleared').textContent = `クリア: ${questionsCleared}もん`;
+    updateTypedDisplay();
+}
+
+function setupCurrentPosition() {
+    if (patternIndex < currentPatterns.length) {
+        possibleRomas = [...currentPatterns[patternIndex].roma];
+        typedForCurrent = "";
+    }
+}
+
+function updateTypedDisplay() {
+    const d = document.getElementById('q-typed-display'); let html='';
+    for (let i=0; i<currentPatterns.length; i++) {
+        const disp = currentPatterns[i].display;
+        if (i < patternIndex) { for (const ch of disp) html+=`<span class="char-correct">${ch}</span>`; }
+        else if (i === patternIndex) {
+            const t = typedForCurrent.length;
+            for (let j=0; j<disp.length; j++) {
+                if (j<t) html+=`<span class="char-correct">${disp[j]}</span>`;
+                else if (j===t) html+=`<span class="char-current">${disp[j]}</span>`;
+                else html+=`<span class="char-pending">${disp[j]}</span>`;
+            }
+        } else { for (const ch of disp) html+=`<span class="char-pending">${ch}</span>`; }
+    }
+    d.innerHTML = html;
+}
+
+function updateScoreDisplay() {
+    document.getElementById('score-display').textContent = `スコア: ${score}`;
+    document.getElementById('combo-display').textContent = `🔥 ${combo}コンボ`;
+    const rank = getRank(score);
+    document.getElementById('rank-display').textContent = `${rank.icon} ${rank.name}`;
+}
+
+function getRank(s) {
+    const ranks = currentTheme.ranks; let r = ranks[0];
+    for (let i=ranks.length-1; i>=0; i--) { if (s>=ranks[i].minScore) { r=ranks[i]; break; } }
+    return r;
+}
+function getRankIdx(s) {
+    const ranks = currentTheme.ranks;
+    for (let i=ranks.length-1; i>=0; i--) { if (s>=ranks[i].minScore) return i; }
+    return 0;
+}
+
+// ========== 入力処理 ==========
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('type-input');
+    input.addEventListener('keydown', (e) => {
+        if (!gameRunning || !currentWord) return;
+        if (e.key === 'Escape') { input.value=''; return; }
+        if (e.key.length !== 1) return;
+        e.preventDefault();
+        const ch = e.key; totalChars++;
+        const attempt = typedForCurrent + ch;
+        const exactMatch = possibleRomas.find(r => r === attempt);
+        const partialMatch = possibleRomas.some(r => r.startsWith(attempt));
+
+        // 「ん」のn確定処理: typedForCurrentが'n'でexactMatchがなく、'n'が候補にあった場合
+        // 次の文字が'n'以外→'n'で確定して次パターンへ進み、chを次パターンの入力として再処理
+        if (!exactMatch && !partialMatch && typedForCurrent === 'n' && possibleRomas.includes('n')) {
+            // 'n'で現在パターンを確定
+            correctChars++;
+            allTypedDisplay += 'n';
+            patternIndex++;
+            if (patternIndex >= currentPatterns.length) {
+                // 文完了（稀だが念のため）
+                questionsCleared++; combo++;
+                if (combo > maxCombo) maxCombo = combo;
+                const wLen = currentPatterns.reduce((s,p)=>s+p.display.length,0);
+                score += 10 + combo*2 + wLen;
+                const newIdx = getRankIdx(score);
+                if (newIdx > prevRankIdx) { playRankUpSE(); prevRankIdx = newIdx; }
+                else { playCorrectSE(currentThemeId); }
+                updateScoreDisplay(); showCorrectEffect();
+                input.value='';
+                setTimeout(()=>{ if(gameRunning) showNextWord(); }, 300);
+                return;
+            }
+            // 次パターンに進んでchを再適用
+            setupCurrentPosition();
+            typedForCurrent = '';
+            const attempt2 = ch;
+            const exact2 = possibleRomas.find(r => r === attempt2);
+            const partial2 = possibleRomas.some(r => r.startsWith(attempt2));
+            if (exact2) {
+                correctChars++; typedForCurrent = attempt2; allTypedDisplay += attempt2;
+                patternIndex++;
+                if (patternIndex >= currentPatterns.length) {
+                    questionsCleared++; combo++;
+                    if (combo > maxCombo) maxCombo = combo;
+                    const wLen = currentPatterns.reduce((s,p)=>s+p.display.length,0);
+                    score += 10 + combo*2 + wLen;
+                    const newIdx = getRankIdx(score);
+                    if (newIdx > prevRankIdx) { playRankUpSE(); prevRankIdx = newIdx; }
+                    else { playCorrectSE(currentThemeId); }
+                    updateScoreDisplay(); showCorrectEffect();
+                    input.value='';
+                    setTimeout(()=>{ if(gameRunning) showNextWord(); }, 300);
+                } else {
+                    setupCurrentPosition(); updateTypedDisplay();
+                    input.value = allTypedDisplay;
+                }
+            } else if (partial2) {
+                correctChars++; typedForCurrent = attempt2;
+                possibleRomas = possibleRomas.filter(r => r.startsWith(attempt2));
+                updateTypedDisplay(); input.value = allTypedDisplay + typedForCurrent;
+            } else {
+                combo = 0;
+                document.getElementById('combo-display').textContent = '🔥 0コンボ';
+                input.style.borderColor='#f44336';
+                setTimeout(()=>{input.style.borderColor='';},200);
+                playMissSE();
+                updateTypedDisplay(); input.value = allTypedDisplay;
+            }
+            return;
+        }
+
+        if (exactMatch) {
+            correctChars++; typedForCurrent = attempt; allTypedDisplay += attempt;
+            patternIndex++;
+            if (patternIndex >= currentPatterns.length) {
+                questionsCleared++; combo++;
+                if (combo > maxCombo) maxCombo = combo;
+                const wLen = currentPatterns.reduce((s,p)=>s+p.display.length,0);
+                score += 10 + combo*2 + wLen;
+                // ランクアップチェック
+                const newIdx = getRankIdx(score);
+                if (newIdx > prevRankIdx) { playRankUpSE(); prevRankIdx = newIdx; }
+                else { playCorrectSE(currentThemeId); }
+                updateScoreDisplay(); showCorrectEffect();
+                input.value='';
+                setTimeout(()=>{ if(gameRunning) showNextWord(); }, 300);
+            } else {
+                setupCurrentPosition(); updateTypedDisplay();
+                input.value = allTypedDisplay;
+            }
+        } else if (partialMatch) {
+            correctChars++; typedForCurrent = attempt;
+            possibleRomas = possibleRomas.filter(r => r.startsWith(attempt));
+            updateTypedDisplay(); input.value = allTypedDisplay + typedForCurrent;
+        } else {
+            // ミス
+            combo = 0;
+            document.getElementById('combo-display').textContent = '🔥 0コンボ';
+            input.style.borderColor='#f44336';
+            setTimeout(()=>{input.style.borderColor='';},200);
+            playMissSE();
+        }
+    });
+    input.addEventListener('compositionstart', e=>e.preventDefault());
+    input.addEventListener('paste', e=>e.preventDefault());
+    input.addEventListener('input', ()=>{ if(gameRunning) input.value = allTypedDisplay+typedForCurrent; });
+    document.addEventListener('click', ()=>{ if(gameRunning) document.getElementById('type-input').focus(); });
+});
+
+// ========== エフェクト ==========
+function showCorrectEffect() {
+    const ef = document.getElementById('correct-effect');
+    const ct = combo>1 ? ` ${combo}コンボ！` : '';
+    document.getElementById('effect-text').textContent = `✨ せいかい！${ct} ✨`;
+    ef.style.display='flex';
+    const t = document.getElementById('effect-text');
+    t.style.animation='none'; t.offsetHeight; t.style.animation='effectPop 0.6s ease-out forwards';
+    setTimeout(()=>{ef.style.display='none';},600);
+    createParticles();
+}
+function createParticles() {
+    const cx=window.innerWidth/2, cy=window.innerHeight/2, emojis=currentTheme.icons;
+    for (let i=0;i<6;i++) {
+        const p=document.createElement('div');
+        p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+        p.style.cssText=`position:fixed;left:${cx}px;top:${cy}px;font-size:1.6em;pointer-events:none;z-index:300;transition:all 0.6s ease-out;opacity:1;`;
+        document.body.appendChild(p);
+        const angle=(Math.PI*2/6)*i, dist=60+Math.random()*40;
+        requestAnimationFrame(()=>{
+            p.style.left=(cx+Math.cos(angle)*dist)+'px';
+            p.style.top=(cy+Math.sin(angle)*dist-20)+'px';
+            p.style.opacity='0'; p.style.transform='scale(0.3)';
+        });
+        setTimeout(()=>p.remove(),700);
+    }
+}
+
+// ========== ゲーム終了 ==========
+function endGame() {
+    gameRunning=false; clearInterval(gameTimer); gameTimer=null;
+    stopBGM();
+    playTimeUpSE();
+    document.getElementById('game-screen').style.display='none';
+    const rs=document.getElementById('result-screen');
+    rs.style.display='flex'; rs.className=currentTheme.bgClass;
+    const rank=getRank(score);
+    const ac=document.getElementById('result-pixel-art'); ac.innerHTML='';
+    const art=PIXEL_ART[currentThemeId][rank.art];
+    if(art) ac.appendChild(renderPixelArt(art,7));
+    document.getElementById('result-rank-name').textContent=`${rank.icon} ${rank.name}`;
+    document.getElementById('final-score').textContent=score;
+    document.getElementById('final-cleared').textContent=questionsCleared;
+    document.getElementById('final-combo').textContent=maxCombo;
+    document.getElementById('final-accuracy').textContent=totalChars>0?Math.round((correctChars/totalChars)*100)+'%':'100%';
+    const ranks=currentTheme.ranks, idx=ranks.indexOf(rank);
+    if(idx<ranks.length-1) document.getElementById('next-rank-hint').textContent=`つぎ「${ranks[idx+1].name}」まで あと ${ranks[idx+1].minScore-score}てん！`;
+    else document.getElementById('next-rank-hint').textContent='🏆 さいこうランク！おめでとう！';
+}
+
+function backToMenu() {
+    gameRunning=false; if(gameTimer){clearInterval(gameTimer);gameTimer=null;}
+    stopBGM();
+    document.getElementById('game-screen').style.display='none';
+    document.getElementById('result-screen').style.display='none';
+    document.getElementById('theme-select').style.display='flex';
+    document.querySelectorAll('.stpr-stars').forEach(el=>el.remove());
+}
+function restartGame() { document.getElementById('result-screen').style.display='none'; startGame(); }
+function shuffleArray(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+</script>
+</body>
+</html>
