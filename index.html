@@ -873,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (exactMatch) {
             correctChars++; typedForCurrent = attempt; allTypedDisplay += attempt;
+            createMiniPop();
             patternIndex++;
             if (patternIndex >= currentPatterns.length) {
                 questionsCleared++; combo++;
@@ -892,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (partialMatch) {
             correctChars++; typedForCurrent = attempt;
+            createMiniPop();
             possibleRomas = possibleRomas.filter(r => r.startsWith(attempt));
             updateTypedDisplay(); input.value = allTypedDisplay + typedForCurrent;
         } else {
@@ -922,16 +924,14 @@ function showCorrectEffect() {
 }
 function createParticles() {
     const emojis = currentTheme.icons;
-    const count = 10 + Math.min(combo * 2, 10); // コンボ多いほど多く飛ぶ
+    const count = 10 + Math.min(combo * 2, 10);
     for (let i = 0; i < count; i++) {
         const p = document.createElement('div');
         p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-        // 画面下部のランダムな位置から発射
         const startX = Math.random() * window.innerWidth;
         const startY = window.innerHeight + 20;
         p.style.cssText = `position:fixed; left:${startX}px; top:${startY}px; font-size:${1.5 + Math.random()*1.2}em; pointer-events:none; z-index:300; opacity:1; transition: none;`;
         document.body.appendChild(p);
-        // ポンッと跳ね上がる物理演算風
         const vx = (Math.random() - 0.5) * 6;
         const vy = -(8 + Math.random() * 6);
         const gravity = 0.3;
@@ -939,22 +939,43 @@ function createParticles() {
         let x = startX, y = startY, vyNow = vy, frame = 0;
         const animate = () => {
             frame++;
-            x += vx;
-            vyNow += gravity;
-            y += vyNow;
+            x += vx; vyNow += gravity; y += vyNow;
             const rot = (frame / 30) * rotation;
-            p.style.left = x + 'px';
-            p.style.top = y + 'px';
+            p.style.left = x + 'px'; p.style.top = y + 'px';
             p.style.transform = `rotate(${rot}deg)`;
             if (frame > 20) p.style.opacity = Math.max(0, 1 - (frame - 20) / 15);
-            if (frame < 35 && y < window.innerHeight + 50) {
-                requestAnimationFrame(animate);
-            } else {
-                p.remove();
-            }
+            if (frame < 35 && y < window.innerHeight + 50) requestAnimationFrame(animate);
+            else p.remove();
         };
-        // 少しずつ遅れて発射（ポップコーン風のバラバラ感）
         setTimeout(() => requestAnimationFrame(animate), i * 30);
+    }
+}
+
+// 1文字正解時のミニパーティクル
+function createMiniPop() {
+    const input = document.getElementById('type-input');
+    const rect = input.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top;
+    const emojis = currentTheme.icons;
+    const count = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        p.style.cssText = `position:fixed; left:${cx}px; top:${cy}px; font-size:${0.8 + Math.random()*0.5}em; pointer-events:none; z-index:300; opacity:1; transition:none;`;
+        document.body.appendChild(p);
+        const vx = (Math.random() - 0.5) * 4;
+        const vy = -(3 + Math.random() * 3);
+        const gravity = 0.25;
+        let x = cx, y = cy, vyNow = vy, frame = 0;
+        const animate = () => {
+            frame++; x += vx; vyNow += gravity; y += vyNow;
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            p.style.opacity = Math.max(0, 1 - frame / 20);
+            if (frame < 20) requestAnimationFrame(animate);
+            else p.remove();
+        };
+        requestAnimationFrame(animate);
     }
 }
 
